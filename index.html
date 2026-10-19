@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Σύντομος πρακτικός οδηγός για τη γεωαναφορά εικόνων και τις πρόσφατες εξελίξεις σε QGIS και GDAL.">
+  <meta name="description" content="Πρακτικός οδηγός για τη γεωαναφορά εικόνων στο ArcGIS Pro, με βήματα, ελέγχους ακρίβειας και ενημερώσεις.">
   <title>Γεωαναφορά εικόνων | GIS σημειώσεις</title>
   <style>
     :root {
@@ -126,7 +126,7 @@
     .updates-intro p { margin-top: 18px; color: var(--muted); }
     .update-list { border-top: 1px solid var(--line); }
     .update { display: grid; grid-template-columns: 125px 1fr; gap: 20px; padding: 22px 0; border-bottom: 1px solid var(--line); }
-    .update time { color: var(--muted); font-size: .83rem; }
+    .update time, .update-version { color: var(--muted); font-size: .83rem; }
     .update h3 { margin-bottom: 5px; font-size: 1.08rem; }
     .update p { margin-bottom: 8px; color: var(--muted); font-size: .92rem; }
     .update a { font-size: .87rem; font-weight: 700; }
@@ -185,8 +185,8 @@
       <div>
         <p class="eyebrow">Οδηγός GIS · ενημέρωση Οκτώβριος 2026</p>
         <h1>Από την εικόνα<br>στον <em>χάρτη.</em></h1>
-        <p class="hero-copy">Τα βασικά της γεωαναφοράς: πώς συνδέουμε τα pixels μιας εικόνας με πραγματικές συντεταγμένες, πώς ελέγχουμε την ακρίβεια και τι αλλάζει στα εργαλεία GIS.</p>
-        <div class="hero-meta"><span class="live-dot" aria-hidden="true"></span><span>Πρακτικές σημειώσεις για QGIS και GDAL</span></div>
+        <p class="hero-copy">Τα βασικά της γεωαναφοράς στο ArcGIS Pro: πώς συνδέουμε τα pixels μιας εικόνας με πραγματικές συντεταγμένες και πώς ελέγχουμε την ακρίβεια.</p>
+        <div class="hero-meta"><span class="live-dot" aria-hidden="true"></span><span>Πρακτικές σημειώσεις για ArcGIS Pro</span></div>
       </div>
       <div class="map-frame" aria-label="Χάρτης αναφοράς της Θεσσαλονίκης">
         <iframe title="Χάρτης OpenStreetMap της Θεσσαλονίκης" loading="lazy" src="https://www.openstreetmap.org/export/embed.html?bbox=22.92%2C40.60%2C23.02%2C40.66&amp;layer=mapnik&amp;marker=40.64%2C22.97"></iframe>
@@ -197,7 +197,7 @@
     <aside class="ticker" aria-label="Σύντομη ενημέρωση">
       <div class="shell ticker-inner">
         <strong>Σύντομη ενημέρωση</strong>
-        <p>Νεότερες εκδόσεις: QGIS 3.44.15 · GDAL 3.13.3</p>
+        <p>Τρέχουσα τεκμηρίωση ArcGIS Pro: έκδοση 3.7</p>
         <a href="#updates">Δες τις ημερομηνίες ↓</a>
       </div>
     </aside>
@@ -219,7 +219,7 @@
       <div class="shell">
         <div class="section-heading">
           <div><p class="eyebrow">02 / Στην πράξη</p><h2>Μια καθαρή ροή εργασίας</h2></div>
-          <p>Στο QGIS άνοιξε τον Γεωαναφορέα (Raster → Georeferencer) και δούλεψε με αυτή τη σειρά.</p>
+          <p>Στο ArcGIS Pro πρόσθεσε το raster στον χάρτη, επίλεξέ το και άνοιξε την καρτέλα Georeference.</p>
         </div>
         <div class="steps">
           <article class="step"><span class="step-number">1</span><h3>Διάλεξε σημεία</h3><p>Βρες ευδιάκριτα GCPs που υπάρχουν και στην εικόνα και σε αξιόπιστο επίπεδο αναφοράς.</p></article>
@@ -238,11 +238,11 @@
         </div>
         <div class="tech-grid">
           <article class="tech-item"><h3>GCPs και σφάλμα</h3><p>Περισσότερα σημεία δεν εγγυώνται καλύτερη λύση. Προτίμησε ακριβή, καλά κατανεμημένα σημεία. Το RMSE συνοψίζει τα κατάλοιπα του μοντέλου, όχι απαραίτητα την πραγματική ακρίβεια στο έδαφος.</p></article>
-          <article class="tech-item"><h3>Μοντέλο μετασχηματισμού</h3><p>Ο αφινικός μετασχηματισμός χειρίζεται μετατόπιση, περιστροφή, κλίμακα και διάτμηση. Πολυωνυμικά μοντέλα ή thin plate spline μπορούν να διορθώσουν παραμορφώσεις, αλλά ενδέχεται να αλλοιώσουν τοπικά τη γεωμετρία.</p></article>
+          <article class="tech-item"><h3>Μοντέλο μετασχηματισμού</h3><p>Στην καρτέλα Georeference επίλεξε κατάλληλο μετασχηματισμό, όπως 1st Order Polynomial (Affine), Projective, Adjust ή Spline. Τα πιο σύνθετα μοντέλα μπορούν να διορθώσουν παραμορφώσεις, αλλά ενδέχεται να αλλοιώσουν τοπικά τη γεωμετρία.</p></article>
           <article class="tech-item"><h3>Επαναδειγματοληψία</h3><p>Nearest neighbour για κατηγορικές τιμές και ταξινομημένους χάρτες. Bilinear ή cubic για συνεχείς εικόνες, όπως αεροφωτογραφίες. Η παρεμβολή αλλάζει τις τιμές των pixels.</p></article>
           <article class="tech-item"><h3>Ανεξάρτητος έλεγχος</h3><p>Κράτησε μερικά σημεία εκτός της προσαρμογής και χρησιμοποίησέ τα για έλεγχο. Έτσι αποφεύγεις να αξιολογείς το μοντέλο μόνο με τα ίδια GCPs που το δημιούργησαν.</p></article>
-          <article class="tech-item"><h3>Μορφή εξόδου</h3><p>Το GeoTIFF μπορεί να ενσωματώνει γεωαναφορά και CRS. Σε ορισμένες ροές εργασίας θα συναντήσεις και world files, τα οποία αποθηκεύουν τον μετασχηματισμό σε ξεχωριστό αρχείο.</p></article>
-          <article class="tech-item"><h3>Αυτοματισμός με GDAL</h3><p>Για επαναλήψιμες μετατροπές, το GDAL προσφέρει εργαλεία γραμμής εντολών. Το CRS προορισμού στο παράδειγμα είναι ενδεικτικό.</p><code class="code-line">gdalwarp -t_srs EPSG:2100 -r cubic input.tif output.tif</code></article>
+          <article class="tech-item"><h3>Αποθήκευση</h3><p>Χρησιμοποίησε Save για να αποθηκεύσεις τη γεωαναφορά στο raster ή Save As New για να δημιουργήσεις νέο raster με τις αλλαγές εφαρμοσμένες. Έλεγξε ότι το αποτέλεσμα έχει το σωστό CRS.</p></article>
+          <article class="tech-item"><h3>Πίνακας σημείων</h3><p>Ο Control Point Table εμφανίζει τις συντεταγμένες των σημείων και τα σφάλματά τους. Έλεγξε τις αντιστοιχίσεις πριν εφαρμόσεις τον μετασχηματισμό και κράτησε αντίγραφο της αρχικής εικόνας.</p></article>
         </div>
       </div>
     </section>
@@ -252,20 +252,20 @@
         <div class="updates-intro">
           <p class="eyebrow">04 / Τελευταίες ενημερώσεις</p>
           <h2>Η εργαλειοθήκη εξελίσσεται.</h2>
-          <p>Οι πιο πρόσφατες διαθέσιμες εκδόσεις που επιβεβαιώθηκαν στις επίσημες σελίδες κυκλοφορίας. Πρόκειται για ενημερώσεις έκδοσης· δες τα release notes για αναλυτικές αλλαγές και διορθώσεις.</p>
+          <p>Σύμφωνα με την επίσημη τεκμηρίωση της Esri που ελέγχθηκε στις 19 Οκτωβρίου 2026, η τρέχουσα τεκμηριωμένη έκδοση είναι η 3.7. Δες την επίσημη σελίδα για αναλυτικές αλλαγές.</p>
         </div>
         <div class="update-list">
           <article class="update">
-            <time datetime="2026-09-25">25 Σεπτεμβρίου 2026</time>
-            <div><h3>QGIS 3.44.15 <span class="update-label">Νεότερη έκδοση</span></h3><p>Η νεότερη έκδοση της σειράς 3.44 κατά τον έλεγχο. Οι διορθώσεις και οι αλλαγές ανά έκδοση καταγράφονται στην επίσημη σελίδα.</p><a href="https://github.com/qgis/QGIS/releases/tag/final-3_44_15" target="_blank" rel="noreferrer">Επίσημη ανακοίνωση QGIS ↗</a></div>
+            <time datetime="2026-10-19">19 Οκτωβρίου 2026</time>
+            <div><h3>ArcGIS Pro 3.7 <span class="update-label">Τρέχουσα τεκμηρίωση</span></h3><p>Η σελίδα «What’s new» της Esri καταγράφει βελτιώσεις απόδοσης και παραγωγικότητας για την έκδοση 3.7.</p><a href="https://doc.esri.com/en/arcgis-pro/latest/get-started/whats-new-in-arcgis-pro.html" target="_blank" rel="noreferrer">Τι νέο υπάρχει στο ArcGIS Pro 3.7 ↗</a></div>
           </article>
           <article class="update">
-            <time datetime="2026-08-18">18 Αυγούστου 2026</time>
-            <div><h3>GDAL 3.13.3</h3><p>Νεότερη έκδοση GDAL κατά τον έλεγχο. Συμβουλέψου τις σημειώσεις έκδοσης πριν αναβαθμίσεις εργαλεία παραγωγής.</p><a href="https://github.com/OSGeo/gdal/releases/tag/v3.13.3" target="_blank" rel="noreferrer">Επίσημα release notes GDAL ↗</a></div>
+            <span class="update-version">ArcGIS Pro 3.7</span>
+            <div><h3>Αυτόματη αναγνώριση GCPs στο Reality mapping</h3><p>Η έκδοση 3.7 υποστηρίζει αυτόματη ανίχνευση και σήμανση signalized ground control points στις ροές Reality mapping. Πρόκειται για δυνατότητα αυτού του workflow, όχι για αυτόματη επιλογή σημείων στην καρτέλα Georeference.</p><a href="https://doc.esri.com/en/arcgis-pro/latest/get-started/whats-new-in-arcgis-pro.html" target="_blank" rel="noreferrer">Σχετικές ενημερώσεις Esri ↗</a></div>
           </article>
           <article class="update">
             <time datetime="2026-10-19">19 Οκτωβρίου 2026</time>
-            <div><h3>Διαλειτουργικότητα και τεκμηρίωση</h3><p>Για ασφαλή ανταλλαγή raster, έλεγξε τη συμπεριφορά GeoTIFF/CRS στις εκδόσεις που χρησιμοποιείς και κατέγραψε το CRS, τη μέθοδο μετασχηματισμού και την επαναδειγματοληψία.</p><a href="https://www.ogc.org/standard/geotiff/" target="_blank" rel="noreferrer">Πρότυπο GeoTIFF του OGC ↗</a></div>
+            <div><h3>Georeference και control points</h3><p>Η καρτέλα Georeference επιτρέπει την ευθυγράμμιση raster με δεδομένα αναφοράς μέσω σημείων ελέγχου και μετασχηματισμών.</p><a href="https://doc.esri.com/en/arcgis-pro/latest/help/data/imagery/overview-of-georeferencing.html" target="_blank" rel="noreferrer">Επισκόπηση γεωαναφοράς Esri ↗</a></div>
           </article>
         </div>
       </div>
@@ -275,9 +275,9 @@
       <div class="shell resources">
         <div><p class="eyebrow">Για το επόμενο βήμα</p><h2 id="resources-title">Επίσημες πηγές</h2></div>
         <ul class="resource-list">
-          <li><a href="https://docs.qgis.org/3.44/en/docs/user_manual/managing_data_source/georeferencer.html" target="_blank" rel="noreferrer">QGIS · Georeferencer</a><span>Εργαλεία, GCPs και ρυθμίσεις γεωαναφοράς</span></li>
-          <li><a href="https://gdal.org/en/stable/programs/gdalwarp.html" target="_blank" rel="noreferrer">GDAL · gdalwarp</a><span>Μετασχηματισμός και επαναδειγματοληψία raster</span></li>
-          <li><a href="https://www.ogc.org/standard/geotiff/" target="_blank" rel="noreferrer">OGC · GeoTIFF</a><span>Προδιαγραφή για γεωαναφερμένα αρχεία εικόνας</span></li>
+          <li><a href="https://doc.esri.com/en/arcgis-pro/latest/help/data/imagery/overview-of-georeferencing.html" target="_blank" rel="noreferrer">ArcGIS Pro · Overview of georeferencing</a><span>Ροή εργασίας, καρτέλα Georeference και σημεία ελέγχου</span></li>
+          <li><a href="https://doc.esri.com/en/arcgis-pro/latest/get-started/whats-new-in-arcgis-pro.html" target="_blank" rel="noreferrer">ArcGIS Pro · What’s new</a><span>Νέες δυνατότητες και βελτιώσεις ανά έκδοση</span></li>
+          <li><a href="https://www.ogc.org/standards/geotiff/" target="_blank" rel="noreferrer">OGC · GeoTIFF</a><span>Προδιαγραφή για γεωαναφερμένα αρχεία εικόνας</span></li>
         </ul>
       </div>
     </section>
