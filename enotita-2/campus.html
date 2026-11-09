@@ -1,0 +1,483 @@
+<!doctype html>
+<html lang="el">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Εύρεση διαδρομής στο campus με γράφημα δρόμων και τον αλγόριθμο Dijkstra.">
+  <title>Διαδρομές στο campus | Ενότητα 2</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@v10.6.1/ol.css">
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #192b25;
+      --muted: #5e7168;
+      --paper: #f4f7f2;
+      --white: #fff;
+      --line: #d7e1d9;
+      --green: #176248;
+      --green-dark: #104a38;
+      --lime: #d6ed89;
+      --coral: #e76f51;
+      --soft-green: #e8f0e7;
+      --sans: "Avenir Next", Avenir, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--paper);
+      font-family: var(--sans);
+      line-height: 1.55;
+    }
+    .shell { width: min(1180px, calc(100% - 40px)); margin-inline: auto; }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 20px;
+      padding-block: 18px;
+      border-bottom: 1px solid var(--line);
+      color: var(--muted);
+      font-size: .85rem;
+    }
+    header a { color: var(--green-dark); font-weight: 800; text-decoration: none; }
+    main { padding-block: 38px 64px; }
+    .eyebrow {
+      margin: 0 0 8px;
+      color: var(--green);
+      font-size: .76rem;
+      font-weight: 800;
+      letter-spacing: .13em;
+      text-transform: uppercase;
+    }
+    h1, h2 { margin: 0; font-family: Georgia, "Times New Roman", serif; font-weight: 500; }
+    h1 { font-size: clamp(2.2rem, 5vw, 3.8rem); line-height: 1.1; }
+    h2 { font-size: clamp(1.7rem, 3vw, 2.4rem); }
+    .intro { margin: 10px 0 25px; color: var(--muted); }
+    .controls {
+      display: flex;
+      align-items: end;
+      flex-wrap: wrap;
+      gap: 14px;
+      margin-bottom: 16px;
+      padding: 16px;
+      border: 1px solid var(--line);
+      background: var(--white);
+    }
+    .field { display: grid; gap: 4px; }
+    .field label { color: var(--muted); font-size: .83rem; font-weight: 700; }
+    select {
+      min-width: 118px;
+      padding: 9px 32px 9px 11px;
+      border: 1px solid #aebfb2;
+      border-radius: 2px;
+      color: var(--ink);
+      background: var(--white);
+      font: inherit;
+    }
+    .result {
+      flex: 1 1 300px;
+      min-height: 42px;
+      align-content: center;
+      color: var(--green-dark);
+      font-weight: 700;
+    }
+    .result[data-unreachable="true"] { color: #a53d2b; }
+    #map {
+      width: 100%;
+      height: min(66vh, 660px);
+      min-height: 390px;
+      border: 1px solid var(--line);
+      background: var(--white);
+    }
+    .ol-control button { background-color: var(--green-dark); }
+    .ol-control button:hover { background-color: var(--green); }
+    .tables {
+      display: grid;
+      grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr);
+      gap: 28px;
+      margin-top: 40px;
+    }
+    .table-section { min-width: 0; }
+    .table-section h2 { margin-bottom: 12px; }
+    .table-scroll { overflow-x: auto; border: 1px solid var(--line); background: var(--white); }
+    table { width: 100%; border-collapse: collapse; font-size: .88rem; white-space: nowrap; }
+    th, td { padding: 9px 11px; border-bottom: 1px solid var(--line); text-align: left; }
+    th { color: var(--green-dark); background: var(--soft-green); font-size: .8rem; }
+    tbody tr:last-child td { border-bottom: 0; }
+    td.numeric { text-align: right; font-variant-numeric: tabular-nums; }
+    .map-note { margin: 9px 0 0; color: var(--muted); font-size: .82rem; }
+    @media (max-width: 760px) {
+      .shell { width: min(100% - 28px, 600px); }
+      header { align-items: flex-start; }
+      header > span { text-align: right; }
+      main { padding-top: 28px; }
+      .controls { align-items: stretch; }
+      .field { flex: 1; }
+      select { width: 100%; }
+      #map { height: 58vh; min-height: 340px; }
+      .tables { grid-template-columns: 1fr; gap: 28px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="shell">
+    <a href="../index.html">GIS Σημειώσεις</a>
+    <span>Ενότητα 2 · Δίκτυο campus</span>
+  </header>
+
+  <main class="shell">
+    <p class="eyebrow">ΕΓΣΑ87 · Αποστάσεις σε μέτρα</p>
+    <h1>Επέλεξε διαδρομή</h1>
+    <p class="intro">Διάλεξε κόμβο αφετηρίας και προορισμού για να υπολογιστεί η συντομότερη διαδρομή.</p>
+
+    <div class="controls">
+      <div class="field">
+        <label for="from-node">Από</label>
+        <select id="from-node" name="from"></select>
+      </div>
+      <div class="field">
+        <label for="to-node">Προς</label>
+        <select id="to-node" name="to"></select>
+      </div>
+      <output id="route-result" class="result" aria-live="polite"></output>
+    </div>
+
+    <div id="map" role="region" aria-label="Χάρτης δρόμων, κτηρίων και επιλεγμένης διαδρομής"></div>
+    <p class="map-note">Οι δρόμοι ενώνονται μόνο στα άκρα τους. Τα ενδιάμεσα σημεία καθορίζουν τη γεωμετρία και το μήκος τους.</p>
+
+    <div class="tables">
+      <section class="table-section" aria-labelledby="nodes-title">
+        <h2 id="nodes-title">Κόμβοι</h2>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>Γράμμα</th><th>X</th><th>Y</th><th>Ακμές που ξεκινούν</th></tr></thead>
+            <tbody id="nodes-table"></tbody>
+          </table>
+        </div>
+      </section>
+      <section class="table-section" aria-labelledby="edges-title">
+        <h2 id="edges-title">Ακμές</h2>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>Κωδικός</th><th>Οδός</th><th>Από</th><th>Προς</th><th>Μήκος (μ.)</th><th>Μονόδρομος</th></tr></thead>
+            <tbody id="edges-table"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/ol@v10.6.1/dist/ol.js"></script>
+  <script src="./campus.js"></script>
+  <script>
+    const nodeLetters = ["Α", "Β", "Γ", "Δ", "Ε", "Ζ", "Η", "Θ", "Ι", "Κ", "Λ", "Μ", "Ν", "Ξ", "Ο", "Π", "Ρ", "Σ", "Τ", "Υ", "Φ", "Χ", "Ψ", "Ω"];
+    const mergeTolerance = 0.5;
+    const numberFormat = new Intl.NumberFormat("el-GR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+    const coordinateFormat = new Intl.NumberFormat("el-GR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const nodes = [];
+    const edges = [];
+    const adjacency = new Map();
+
+    function distanceBetween(a, b) {
+      return Math.hypot(a[0] - b[0], a[1] - b[1]);
+    }
+
+    function getOrCreateNode(coordinate) {
+      let closestNode = null;
+      let closestDistance = mergeTolerance;
+      for (const node of nodes) {
+        const distance = distanceBetween(node.coordinate, coordinate);
+        if (distance < closestDistance) {
+          closestNode = node;
+          closestDistance = distance;
+        }
+      }
+      if (closestNode) return closestNode;
+
+      const node = { id: nodes.length, coordinate: coordinate.slice(), letter: "" };
+      nodes.push(node);
+      return node;
+    }
+
+    for (const road of dromoi) {
+      const start = getOrCreateNode(road.simeia[0]);
+      const end = getOrCreateNode(road.simeia[road.simeia.length - 1]);
+      const length = road.simeia.slice(1).reduce((total, point, index) => {
+        return total + distanceBetween(road.simeia[index], point);
+      }, 0);
+      edges.push({
+        id: edges.length,
+        road,
+        start,
+        end,
+        length,
+        coordinates: road.simeia.map((point) => point.slice())
+      });
+    }
+
+    const sortedNodes = [...nodes].sort((a, b) =>
+      b.coordinate[1] - a.coordinate[1] ||
+      a.coordinate[0] - b.coordinate[0] ||
+      a.id - b.id
+    );
+    if (sortedNodes.length > nodeLetters.length) {
+      throw new Error(`Το δίκτυο έχει ${sortedNodes.length} κόμβους, αλλά υπάρχουν μόνο ${nodeLetters.length} διαθέσιμα γράμματα.`);
+    }
+    sortedNodes.forEach((node, index) => {
+      node.letter = nodeLetters[index];
+      adjacency.set(node.id, []);
+    });
+
+    for (const edge of edges) {
+      adjacency.get(edge.start.id).push({ node: edge.end, edge });
+      if (!edge.road.monodromos) {
+        adjacency.get(edge.end.id).push({ node: edge.start, edge });
+      }
+    }
+
+    function addCell(row, value, className = "") {
+      const cell = document.createElement("td");
+      cell.textContent = value;
+      if (className) cell.className = className;
+      row.append(cell);
+    }
+
+    const nodesTable = document.getElementById("nodes-table");
+    for (const node of sortedNodes) {
+      const row = document.createElement("tr");
+      addCell(row, node.letter);
+      addCell(row, coordinateFormat.format(node.coordinate[0]), "numeric");
+      addCell(row, coordinateFormat.format(node.coordinate[1]), "numeric");
+      addCell(row, String(adjacency.get(node.id).length), "numeric");
+      nodesTable.append(row);
+    }
+
+    const edgesTable = document.getElementById("edges-table");
+    for (const edge of edges) {
+      const row = document.createElement("tr");
+      addCell(row, edge.road.kodikos);
+      addCell(row, edge.road.odos);
+      addCell(row, edge.start.letter);
+      addCell(row, edge.end.letter);
+      addCell(row, numberFormat.format(edge.length), "numeric");
+      addCell(row, edge.road.monodromos ? "Ναι" : "Όχι");
+      edgesTable.append(row);
+    }
+
+    const fromSelect = document.getElementById("from-node");
+    const toSelect = document.getElementById("to-node");
+    for (const node of sortedNodes) {
+      for (const select of [fromSelect, toSelect]) {
+        const option = document.createElement("option");
+        option.value = String(node.id);
+        option.textContent = node.letter;
+        select.append(option);
+      }
+    }
+    fromSelect.value = String(sortedNodes[0].id);
+    toSelect.value = String(sortedNodes[sortedNodes.length - 1].id);
+
+    const dataExtent = ol.extent.createEmpty();
+    for (const road of dromoi) {
+      for (const coordinate of road.simeia) ol.extent.extendCoordinate(dataExtent, coordinate);
+    }
+    for (const building of ktiria) {
+      for (const coordinate of building.perigramma) ol.extent.extendCoordinate(dataExtent, coordinate);
+    }
+    const margin = Math.max(30, Math.max(ol.extent.getWidth(dataExtent), ol.extent.getHeight(dataExtent)) * 0.06);
+    const projectionExtent = [
+      dataExtent[0] - margin,
+      dataExtent[1] - margin,
+      dataExtent[2] + margin,
+      dataExtent[3] + margin
+    ];
+    const projection = new ol.proj.Projection({
+      code: "CAMPUS:LOCAL",
+      units: "m",
+      extent: projectionExtent
+    });
+
+    const buildingFeatures = ktiria.map((building) => {
+      const geometry = new ol.geom.Polygon([building.perigramma]);
+      const feature = new ol.Feature({ geometry, name: building.onoma });
+      feature.setStyle([
+        new ol.style.Style({
+          fill: new ol.style.Fill({ color: "rgba(214, 237, 137, 0.62)" }),
+          stroke: new ol.style.Stroke({ color: "#809b62", width: 1.5 })
+        }),
+        new ol.style.Style({
+          geometry: geometry.getInteriorPoint(),
+          text: new ol.style.Text({
+            text: building.onoma,
+            font: "600 12px sans-serif",
+            fill: new ol.style.Fill({ color: "#34473a" }),
+            stroke: new ol.style.Stroke({ color: "#ffffff", width: 3 }),
+            overflow: true
+          })
+        })
+      ]);
+      return feature;
+    });
+
+    const roadFeatures = edges.map((edge) => {
+      const geometry = new ol.geom.LineString(edge.coordinates);
+      const feature = new ol.Feature({ geometry, edge });
+      const oneWay = edge.road.monodromos;
+      const color = oneWay ? "#d45d42" : "#526c60";
+      const styles = [
+        new ol.style.Style({
+          stroke: new ol.style.Stroke({ color, width: oneWay ? 3.5 : 2.5, lineCap: "round", lineJoin: "round" })
+        }),
+        new ol.style.Style({
+          geometry: new ol.geom.Point(geometry.getCoordinateAt(0.5)),
+          text: new ol.style.Text({
+            text: `${edge.road.odos}, ${numberFormat.format(edge.length)} μ.`,
+            font: "11px sans-serif",
+            fill: new ol.style.Fill({ color: "#263b30" }),
+            stroke: new ol.style.Stroke({ color: "#ffffff", width: 3 }),
+            overflow: true
+          })
+        })
+      ];
+      if (oneWay) {
+        const before = geometry.getCoordinateAt(0.49);
+        const after = geometry.getCoordinateAt(0.51);
+        const angle = Math.atan2(after[1] - before[1], after[0] - before[0]);
+        styles.push(new ol.style.Style({
+          geometry: new ol.geom.Point(geometry.getCoordinateAt(0.5)),
+          image: new ol.style.RegularShape({
+            points: 3,
+            radius: 8,
+            rotation: -angle,
+            fill: new ol.style.Fill({ color }),
+            stroke: new ol.style.Stroke({ color: "#ffffff", width: 1 })
+          })
+        }));
+      }
+      feature.setStyle(styles);
+      return feature;
+    });
+
+    const nodeFeatures = sortedNodes.map((node) => {
+      const feature = new ol.Feature({ geometry: new ol.geom.Point(node.coordinate), node });
+      feature.setStyle(new ol.style.Style({
+        image: new ol.style.Circle({
+          radius: 6,
+          fill: new ol.style.Fill({ color: "#176248" }),
+          stroke: new ol.style.Stroke({ color: "#ffffff", width: 2 })
+        }),
+        text: new ol.style.Text({
+          text: node.letter,
+          offsetY: -15,
+          font: "700 13px sans-serif",
+          fill: new ol.style.Fill({ color: "#104a38" }),
+          stroke: new ol.style.Stroke({ color: "#ffffff", width: 3 })
+        })
+      }));
+      return feature;
+    });
+
+    const buildingLayer = new ol.layer.Vector({ source: new ol.source.Vector({ features: buildingFeatures }) });
+    const roadLayer = new ol.layer.Vector({ source: new ol.source.Vector({ features: roadFeatures }) });
+    const nodeLayer = new ol.layer.Vector({ source: new ol.source.Vector({ features: nodeFeatures }) });
+    const routeSource = new ol.source.Vector();
+    const routeLayer = new ol.layer.Vector({
+      source: routeSource,
+      style: new ol.style.Style({
+        stroke: new ol.style.Stroke({ color: "#2467d6", width: 6, lineCap: "round", lineJoin: "round" })
+      })
+    });
+
+    const view = new ol.View({ projection, center: ol.extent.getCenter(dataExtent) });
+    const map = new ol.Map({
+      target: "map",
+      layers: [buildingLayer, roadLayer, nodeLayer, routeLayer],
+      view
+    });
+    map.updateSize();
+    view.fit(dataExtent, { padding: [55, 55, 55, 55] });
+
+    function runDijkstra(startId) {
+      const distances = new Map(nodes.map((node) => [node.id, Infinity]));
+      const predecessors = new Map();
+      const pending = new Set(nodes.map((node) => node.id));
+      distances.set(startId, 0);
+
+      while (pending.size > 0) {
+        let currentId = null;
+        let currentDistance = Infinity;
+        for (const nodeId of pending) {
+          const distance = distances.get(nodeId);
+          if (distance < currentDistance) {
+            currentDistance = distance;
+            currentId = nodeId;
+          }
+        }
+        if (currentId === null) break;
+
+        pending.delete(currentId);
+        for (const neighbor of adjacency.get(currentId)) {
+          if (!pending.has(neighbor.node.id)) continue;
+          const candidate = currentDistance + neighbor.edge.length;
+          if (candidate < distances.get(neighbor.node.id)) {
+            distances.set(neighbor.node.id, candidate);
+            predecessors.set(neighbor.node.id, { from: currentId, edge: neighbor.edge });
+          }
+        }
+      }
+      return { distances, predecessors };
+    }
+
+    const resultElement = document.getElementById("route-result");
+    function updateRoute() {
+      const startId = Number(fromSelect.value);
+      const endId = Number(toSelect.value);
+      const { distances, predecessors } = runDijkstra(startId);
+      const totalLength = distances.get(endId);
+      routeSource.clear();
+
+      if (!Number.isFinite(totalLength)) {
+        resultElement.textContent = "δεν υπάρχει διαδρομή";
+        resultElement.dataset.unreachable = "true";
+        return;
+      }
+
+      const routeNodes = [endId];
+      const routeSteps = [];
+      let currentId = endId;
+      while (currentId !== startId) {
+        const previous = predecessors.get(currentId);
+        if (!previous) throw new Error(`Δεν βρέθηκε προηγούμενος κόμβος για το ${nodes[currentId].letter}.`);
+        routeSteps.push(previous);
+        currentId = previous.from;
+        routeNodes.push(currentId);
+      }
+      routeNodes.reverse();
+      routeSteps.reverse();
+
+      const routeCoordinates = [];
+      for (const step of routeSteps) {
+        let coordinates = step.edge.coordinates.map((point) => point.slice());
+        if (step.edge.start.id !== step.from) coordinates.reverse();
+        coordinates[0] = nodes[step.from].coordinate.slice();
+        coordinates[coordinates.length - 1] = nodes[step.edge.start.id === step.from ? step.edge.end.id : step.edge.start.id].coordinate.slice();
+        if (routeCoordinates.length === 0) routeCoordinates.push(...coordinates);
+        else routeCoordinates.push(...coordinates.slice(1));
+      }
+      if (routeCoordinates.length > 1) {
+        routeSource.addFeature(new ol.Feature({ geometry: new ol.geom.LineString(routeCoordinates) }));
+      }
+
+      const routeText = routeNodes.map((nodeId) => nodes[nodeId].letter).join(" → ");
+      resultElement.textContent = `${routeText} · ${numberFormat.format(totalLength)} μ.`;
+      delete resultElement.dataset.unreachable;
+    }
+
+    fromSelect.addEventListener("change", updateRoute);
+    toSelect.addEventListener("change", updateRoute);
+    updateRoute();
+  </script>
+</body>
+</html>
