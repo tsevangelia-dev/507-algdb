@@ -108,6 +108,18 @@
       font-weight: 700;
     }
     .stop-option input:disabled { opacity: .5; }
+    .select-all-stops {
+      justify-self: start;
+      padding: 5px 9px;
+      border: 1px solid var(--line);
+      color: var(--green-dark);
+      background: var(--soft-green);
+      font: inherit;
+      font-size: .85rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .select-all-stops:hover { background: var(--lime); }
     .coffee-actions { display: flex; flex-wrap: wrap; gap: 8px; }
     .coffee-actions button {
       padding: 9px 13px;
@@ -197,6 +209,7 @@
         </div>
         <fieldset class="stops-field">
           <legend class="stops-title">Στάσεις</legend>
+          <button id="select-all-stops" class="select-all-stops" type="button">Επίλεξε όλες τις στάσεις</button>
           <div id="stops-list" class="stops-list"></div>
         </fieldset>
         <div class="coffee-actions">
@@ -890,6 +903,12 @@
     }
 
     coffeeStartSelect.addEventListener("change", updateCoffeeSelection);
+    document.getElementById("select-all-stops").addEventListener("click", () => {
+      for (const checkbox of stopCheckboxes.values()) {
+        if (!checkbox.disabled) checkbox.checked = true;
+      }
+      updateCoffeeSelection();
+    });
     document.getElementById("all-orders").addEventListener("click", runAllOrders);
     document.getElementById("nearest-neighbor").addEventListener("click", runNearestNeighbor);
     updateCoffeeSelection();
