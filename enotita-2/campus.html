@@ -794,15 +794,6 @@
     function runAllOrders() {
       const startId = Number(coffeeStartSelect.value);
       const stops = selectedCoffeeStops(startId).map((node) => node.id);
-      const possibleOrders = factorial(stops.length);
-      if (stops.length > 10) {
-        const message = `${possibleOrders.toLocaleString("el-GR")} δυνατές σειρές — είναι πάρα πολλές για να δοκιμαστούν.`;
-        coffeeTourResults.set("optimal", { message: "Δεν εκτελέστηκε", ordersTried: 0, duration: null });
-        renderTourResults();
-        drawCoffeeTour(optimalTourSource, null);
-        setCoffeeStatus(message, true);
-        return;
-      }
 
       const startedAt = performance.now();
       let tested = 0;
