@@ -84,6 +84,45 @@
       font-weight: 700;
     }
     .result[data-unreachable="true"] { color: #a53d2b; }
+    .coffee-section {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(220px, .7fr);
+      gap: 18px 28px;
+      margin: 28px 0 16px;
+      padding: 20px;
+      border: 1px solid var(--line);
+      background: var(--white);
+    }
+    .coffee-section h2 { grid-column: 1 / -1; }
+    .coffee-controls { display: grid; gap: 16px; }
+    .stops-field { display: grid; gap: 7px; margin: 0; padding: 0; border: 0; }
+    .stops-title { color: var(--muted); font-size: .83rem; font-weight: 700; }
+    .stops-list { display: flex; flex-wrap: wrap; gap: 7px; }
+    .stop-option {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 8px;
+      border: 1px solid var(--line);
+      background: var(--paper);
+      font-weight: 700;
+    }
+    .stop-option input:disabled { opacity: .5; }
+    .coffee-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+    .coffee-actions button {
+      padding: 9px 13px;
+      border: 0;
+      color: var(--white);
+      background: var(--green);
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .coffee-actions button:hover { background: var(--green-dark); }
+    .coffee-info { align-self: center; color: var(--muted); }
+    .coffee-info p { margin: 0 0 8px; }
+    .coffee-status { color: var(--green-dark); font-weight: 700; }
+    .coffee-status[data-error="true"] { color: #a53d2b; }
     #map {
       width: 100%;
       height: min(66vh, 660px);
@@ -108,6 +147,9 @@
     tbody tr:last-child td { border-bottom: 0; }
     td.numeric { text-align: right; font-variant-numeric: tabular-nums; }
     .map-note { margin: 9px 0 0; color: var(--muted); font-size: .82rem; }
+    .coffee-tables { margin-top: 30px; }
+    .coffee-tables .table-section + .table-section { margin-top: 24px; }
+    .coffee-tables .table-section h2 { margin-bottom: 12px; }
     @media (max-width: 760px) {
       .shell { width: min(100% - 28px, 600px); }
       header { align-items: flex-start; }
@@ -116,6 +158,8 @@
       .controls { align-items: stretch; }
       .field { flex: 1; }
       select { width: 100%; }
+      .coffee-section { grid-template-columns: 1fr; padding: 16px; }
+      .coffee-section h2 { grid-column: auto; }
       #map { height: 58vh; min-height: 340px; }
       .tables { grid-template-columns: 1fr; gap: 28px; }
     }
@@ -144,8 +188,51 @@
       <output id="route-result" class="result" aria-live="polite"></output>
     </div>
 
+    <section class="coffee-section" aria-labelledby="coffee-title">
+      <h2 id="coffee-title">Μοίρασε καφέδες</h2>
+      <div class="coffee-controls">
+        <div class="field">
+          <label for="coffee-start">Αφετηρία</label>
+          <select id="coffee-start" name="coffee-start"></select>
+        </div>
+        <fieldset class="stops-field">
+          <legend class="stops-title">Στάσεις</legend>
+          <div id="stops-list" class="stops-list"></div>
+        </fieldset>
+        <div class="coffee-actions">
+          <button id="all-orders" type="button">Όλες οι σειρές</button>
+          <button id="nearest-neighbor" type="button">Πλησιέστερος γείτονας</button>
+        </div>
+      </div>
+      <div class="coffee-info">
+        <p id="coffee-selection-info"></p>
+        <p id="coffee-status" class="coffee-status" aria-live="polite"></p>
+      </div>
+    </section>
+
     <div id="map" role="region" aria-label="Χάρτης δρόμων, κτηρίων και επιλεγμένης διαδρομής"></div>
-    <p class="map-note">Οι δρόμοι ενώνονται μόνο στα άκρα τους. Τα ενδιάμεσα σημεία καθορίζουν τη γεωμετρία και το μήκος τους.</p>
+    <p class="map-note">Οι δρόμοι ενώνονται μόνο στα άκρα τους. Τα ενδιάμεσα σημεία καθορίζουν τη γεωμετρία και το μήκος τους. Αφετηρία: κοραλλί · στάσεις: κίτρινες · όλες οι σειρές: πράσινη γραμμή · πλησιέστερος γείτονας: πορτοκαλί διακεκομμένη.</p>
+
+    <div class="coffee-tables">
+      <section class="table-section" aria-labelledby="tours-title">
+        <h2 id="tours-title">Γύροι</h2>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr><th>Μέθοδος</th><th>Σειρά</th><th>Μήκος (μ.)</th><th>Σειρές που δοκιμάστηκαν</th><th>Χρόνος (ms)</th></tr>
+            </thead>
+            <tbody id="tours-table"></tbody>
+          </table>
+        </div>
+        <p id="tour-comparison" class="map-note"></p>
+      </section>
+      <section class="table-section" aria-labelledby="distances-title">
+        <h2 id="distances-title">Αποστάσεις μεταξύ αφετηρίας και στάσεων</h2>
+        <div class="table-scroll">
+          <table id="distances-table"></table>
+        </div>
+      </section>
+    </div>
 
     <div class="tables">
       <section class="table-section" aria-labelledby="nodes-title">
@@ -360,12 +447,11 @@
       return feature;
     });
 
-    const nodeFeatures = sortedNodes.map((node) => {
-      const feature = new ol.Feature({ geometry: new ol.geom.Point(node.coordinate), node });
-      feature.setStyle(new ol.style.Style({
+    function createNodeStyle(node, color) {
+      return new ol.style.Style({
         image: new ol.style.Circle({
           radius: 6,
-          fill: new ol.style.Fill({ color: "#176248" }),
+          fill: new ol.style.Fill({ color }),
           stroke: new ol.style.Stroke({ color: "#ffffff", width: 2 })
         }),
         text: new ol.style.Text({
@@ -375,7 +461,12 @@
           fill: new ol.style.Fill({ color: "#104a38" }),
           stroke: new ol.style.Stroke({ color: "#ffffff", width: 3 })
         })
-      }));
+      });
+    }
+
+    const nodeFeatures = sortedNodes.map((node) => {
+      const feature = new ol.Feature({ geometry: new ol.geom.Point(node.coordinate), node });
+      feature.setStyle(createNodeStyle(node, "#176248"));
       return feature;
     });
 
@@ -389,11 +480,31 @@
         stroke: new ol.style.Stroke({ color: "#2467d6", width: 6, lineCap: "round", lineJoin: "round" })
       })
     });
+    const optimalTourSource = new ol.source.Vector();
+    const optimalTourLayer = new ol.layer.Vector({
+      source: optimalTourSource,
+      style: new ol.style.Style({
+        stroke: new ol.style.Stroke({ color: "#15803d", width: 8, lineCap: "round", lineJoin: "round" })
+      })
+    });
+    const nearestTourSource = new ol.source.Vector();
+    const nearestTourLayer = new ol.layer.Vector({
+      source: nearestTourSource,
+      style: new ol.style.Style({
+        stroke: new ol.style.Stroke({
+          color: "#f28c28",
+          width: 5,
+          lineDash: [12, 8],
+          lineCap: "round",
+          lineJoin: "round"
+        })
+      })
+    });
 
     const view = new ol.View({ projection, center: ol.extent.getCenter(dataExtent) });
     const map = new ol.Map({
       target: "map",
-      layers: [buildingLayer, roadLayer, nodeLayer, routeLayer],
+      layers: [buildingLayer, roadLayer, optimalTourLayer, nearestTourLayer, nodeLayer, routeLayer],
       view
     });
     map.updateSize();
@@ -478,6 +589,310 @@
     fromSelect.addEventListener("change", updateRoute);
     toSelect.addEventListener("change", updateRoute);
     updateRoute();
+
+    const coffeeStartSelect = document.getElementById("coffee-start");
+    const stopsList = document.getElementById("stops-list");
+    const stopCheckboxes = new Map();
+    const coffeeSelectionInfo = document.getElementById("coffee-selection-info");
+    const coffeeStatus = document.getElementById("coffee-status");
+    const toursTable = document.getElementById("tours-table");
+    const distancesTable = document.getElementById("distances-table");
+    const tourComparison = document.getElementById("tour-comparison");
+    const coffeeDijkstra = new Map();
+    const coffeeTourResults = new Map();
+    const timeFormat = new Intl.NumberFormat("el-GR", { maximumFractionDigits: 2 });
+    const defaultCoffeeStart = sortedNodes.find((node) => node.letter === "Μ");
+    if (!defaultCoffeeStart) throw new Error("Δεν βρέθηκε ο κόμβος Μ για την αφετηρία.");
+
+    for (const node of sortedNodes) {
+      const option = document.createElement("option");
+      option.value = String(node.id);
+      option.textContent = node.letter;
+      coffeeStartSelect.append(option);
+
+      const label = document.createElement("label");
+      label.className = "stop-option";
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.value = String(node.id);
+      checkbox.checked = ["Θ", "Α", "Λ"].includes(node.letter);
+      checkbox.disabled = node.id === defaultCoffeeStart.id;
+      checkbox.addEventListener("change", updateCoffeeSelection);
+      label.append(checkbox, document.createTextNode(node.letter));
+      stopsList.append(label);
+      stopCheckboxes.set(node.id, checkbox);
+    }
+    coffeeStartSelect.value = String(defaultCoffeeStart.id);
+
+    function factorial(count) {
+      let total = 1n;
+      for (let value = 2n; value <= BigInt(count); value += 1n) total *= value;
+      return total;
+    }
+
+    function setCoffeeStatus(message, isError = false) {
+      coffeeStatus.textContent = message;
+      if (isError) coffeeStatus.dataset.error = "true";
+      else delete coffeeStatus.dataset.error;
+    }
+
+    function addTableCell(row, value, className = "") {
+      const cell = document.createElement("td");
+      cell.textContent = value;
+      if (className) cell.className = className;
+      row.append(cell);
+    }
+
+    function renderTourResults() {
+      toursTable.replaceChildren();
+      for (const [key, label] of [["optimal", "Όλες οι σειρές"], ["nearest", "Πλησιέστερος γείτονας"]]) {
+        const row = document.createElement("tr");
+        const result = coffeeTourResults.get(key);
+        addTableCell(row, label);
+        addTableCell(row, result?.order ? result.order.map((nodeId) => nodes[nodeId].letter).join(" → ") : (result?.message ?? "—"));
+        addTableCell(row, Number.isFinite(result?.length) ? numberFormat.format(result.length) : "—", "numeric");
+        addTableCell(row, result ? String(result.ordersTried) : "—", "numeric");
+        addTableCell(row, Number.isFinite(result?.duration) ? timeFormat.format(result.duration) : "—", "numeric");
+        toursTable.append(row);
+      }
+
+      const optimal = coffeeTourResults.get("optimal");
+      const nearest = coffeeTourResults.get("nearest");
+      tourComparison.textContent = "";
+      if (optimal?.order && nearest?.order) {
+        const difference = Math.max(0, nearest.length - optimal.length);
+        const percentage = optimal.length === 0 ? 0 : difference / optimal.length * 100;
+        tourComparison.textContent = `Ο γύρος του πλησιέστερου γείτονα είναι κατά ${numberFormat.format(difference)} μ. (${numberFormat.format(percentage)}%) μακρύτερος.`;
+      }
+    }
+
+    function renderDistanceTable(points) {
+      distancesTable.replaceChildren();
+      const tableHead = document.createElement("thead");
+      const heading = document.createElement("tr");
+      const fromHeading = document.createElement("th");
+      fromHeading.textContent = "Από \\ Προς";
+      heading.append(fromHeading);
+      for (const node of points) {
+        const cell = document.createElement("th");
+        cell.textContent = node.letter;
+        heading.append(cell);
+      }
+      tableHead.append(heading);
+      distancesTable.append(tableHead);
+
+      const tableBody = document.createElement("tbody");
+      for (const fromNode of points) {
+        const row = document.createElement("tr");
+        const rowHeading = document.createElement("th");
+        rowHeading.scope = "row";
+        rowHeading.textContent = fromNode.letter;
+        row.append(rowHeading);
+        const distances = coffeeDijkstra.get(fromNode.id).distances;
+        for (const toNode of points) {
+          const distance = distances.get(toNode.id);
+          addTableCell(row, Number.isFinite(distance) ? numberFormat.format(distance) : "—", "numeric");
+        }
+        tableBody.append(row);
+      }
+      distancesTable.append(tableBody);
+    }
+
+    function selectedCoffeeStops(startId) {
+      return sortedNodes.filter((node) => node.id !== startId && stopCheckboxes.get(node.id).checked);
+    }
+
+    function updateCoffeeSelection() {
+      const startId = Number(coffeeStartSelect.value);
+      const startNode = nodes[startId];
+      const startCheckbox = stopCheckboxes.get(startId);
+      startCheckbox.checked = false;
+      for (const [nodeId, checkbox] of stopCheckboxes) checkbox.disabled = nodeId === startId;
+
+      const stops = selectedCoffeeStops(startId);
+      const ways = factorial(stops.length);
+      coffeeSelectionInfo.textContent = `${stops.length} στάσεις · ${ways.toLocaleString("el-GR")} δυνατές σειρές${stops.length > 10 ? " (πάρα πολλές για εξαντλητική αναζήτηση)" : ""}`;
+
+      coffeeDijkstra.clear();
+      for (const node of [startNode, ...stops]) coffeeDijkstra.set(node.id, runDijkstra(node.id));
+      coffeeTourResults.clear();
+      optimalTourSource.clear();
+      nearestTourSource.clear();
+      tourComparison.textContent = "";
+      renderTourResults();
+      renderDistanceTable([startNode, ...stops]);
+      setCoffeeStatus("");
+
+      const selectedIds = new Set([startId, ...stops.map((node) => node.id)]);
+      for (const feature of nodeFeatures) {
+        const node = feature.get("node");
+        const color = node.id === startId ? "#e76f51" : selectedIds.has(node.id) ? "#e5b93f" : "#176248";
+        feature.setStyle(createNodeStyle(node, color));
+      }
+    }
+
+    function coffeeLegCoordinates(fromId, toId) {
+      if (fromId === toId) return [];
+      const result = coffeeDijkstra.get(fromId);
+      if (!Number.isFinite(result.distances.get(toId))) return null;
+
+      const steps = [];
+      let currentId = toId;
+      while (currentId !== fromId) {
+        const previous = result.predecessors.get(currentId);
+        if (!previous) throw new Error(`Δεν βρέθηκε προηγούμενος κόμβος για το ${nodes[currentId].letter}.`);
+        steps.push(previous);
+        currentId = previous.from;
+      }
+      steps.reverse();
+
+      const coordinates = [];
+      for (const step of steps) {
+        let edgeCoordinates = step.edge.coordinates.map((point) => point.slice());
+        if (step.edge.start.id !== step.from) edgeCoordinates.reverse();
+        edgeCoordinates[0] = nodes[step.from].coordinate.slice();
+        const toNodeId = step.edge.start.id === step.from ? step.edge.end.id : step.edge.start.id;
+        edgeCoordinates[edgeCoordinates.length - 1] = nodes[toNodeId].coordinate.slice();
+        if (coordinates.length === 0) coordinates.push(...edgeCoordinates);
+        else coordinates.push(...edgeCoordinates.slice(1));
+      }
+      return coordinates;
+    }
+
+    function coffeeTourCoordinates(order) {
+      const coordinates = [];
+      for (let index = 0; index < order.length - 1; index += 1) {
+        const leg = coffeeLegCoordinates(order[index], order[index + 1]);
+        if (leg === null) return null;
+        if (leg.length === 0) continue;
+        if (coordinates.length === 0) coordinates.push(...leg);
+        else coordinates.push(...leg.slice(1));
+      }
+      return coordinates;
+    }
+
+    function drawCoffeeTour(source, coordinates) {
+      source.clear();
+      if (coordinates && coordinates.length > 1) {
+        source.addFeature(new ol.Feature({ geometry: new ol.geom.LineString(coordinates) }));
+      }
+    }
+
+    function runAllOrders() {
+      const startId = Number(coffeeStartSelect.value);
+      const stops = selectedCoffeeStops(startId).map((node) => node.id);
+      const possibleOrders = factorial(stops.length);
+      if (stops.length > 10) {
+        const message = `${possibleOrders.toLocaleString("el-GR")} δυνατές σειρές — είναι πάρα πολλές για να δοκιμαστούν.`;
+        coffeeTourResults.set("optimal", { message: "Δεν εκτελέστηκε", ordersTried: 0, duration: null });
+        renderTourResults();
+        drawCoffeeTour(optimalTourSource, null);
+        setCoffeeStatus(message, true);
+        return;
+      }
+
+      const startedAt = performance.now();
+      let tested = 0;
+      let bestLength = Infinity;
+      let bestOrder = null;
+      const order = stops.slice();
+
+      function visitRemaining(position) {
+        if (position === order.length) {
+          tested += 1;
+          const completeOrder = [startId, ...order, startId];
+          let length = 0;
+          for (let index = 0; index < completeOrder.length - 1; index += 1) {
+            const legDistance = coffeeDijkstra.get(completeOrder[index]).distances.get(completeOrder[index + 1]);
+            if (!Number.isFinite(legDistance)) return;
+            length += legDistance;
+          }
+          if (length < bestLength) {
+            bestLength = length;
+            bestOrder = completeOrder;
+          }
+          return;
+        }
+        for (let index = position; index < order.length; index += 1) {
+          [order[position], order[index]] = [order[index], order[position]];
+          visitRemaining(position + 1);
+          [order[position], order[index]] = [order[index], order[position]];
+        }
+      }
+
+      visitRemaining(0);
+      const duration = performance.now() - startedAt;
+      if (!bestOrder) {
+        coffeeTourResults.set("optimal", {
+          message: "Δεν υπάρχει εφικτός γύρος",
+          ordersTried: tested,
+          duration
+        });
+        drawCoffeeTour(optimalTourSource, null);
+        setCoffeeStatus("Δεν υπάρχει εφικτός γύρος που να περνά από όλες τις στάσεις.", true);
+      } else {
+        coffeeTourResults.set("optimal", {
+          order: bestOrder,
+          length: bestLength,
+          ordersTried: tested,
+          duration
+        });
+        drawCoffeeTour(optimalTourSource, coffeeTourCoordinates(bestOrder));
+        setCoffeeStatus(`Δοκιμάστηκαν ${tested.toLocaleString("el-GR")} σειρές.`);
+      }
+      renderTourResults();
+    }
+
+    function runNearestNeighbor() {
+      const startedAt = performance.now();
+      const startId = Number(coffeeStartSelect.value);
+      const remaining = new Set(selectedCoffeeStops(startId).map((node) => node.id));
+      const order = [startId];
+      let currentId = startId;
+
+      while (remaining.size > 0) {
+        let closestId = null;
+        let closestDistance = Infinity;
+        for (const candidateId of remaining) {
+          const distance = coffeeDijkstra.get(currentId).distances.get(candidateId);
+          if (distance < closestDistance) {
+            closestDistance = distance;
+            closestId = candidateId;
+          }
+        }
+        if (closestId === null) break;
+        order.push(closestId);
+        remaining.delete(closestId);
+        currentId = closestId;
+      }
+
+      order.push(startId);
+      const duration = performance.now() - startedAt;
+      const coordinates = remaining.size === 0 ? coffeeTourCoordinates(order) : null;
+      if (!coordinates) {
+        coffeeTourResults.set("nearest", {
+          message: "Δεν υπάρχει εφικτός γύρος",
+          ordersTried: 0,
+          duration
+        });
+        drawCoffeeTour(nearestTourSource, null);
+        setCoffeeStatus("Ο πλησιέστερος γείτονας δεν μπορεί να ολοκληρώσει τον γύρο.", true);
+      } else {
+        let length = 0;
+        for (let index = 0; index < order.length - 1; index += 1) {
+          length += coffeeDijkstra.get(order[index]).distances.get(order[index + 1]);
+        }
+        coffeeTourResults.set("nearest", { order, length, ordersTried: 0, duration });
+        drawCoffeeTour(nearestTourSource, coordinates);
+        setCoffeeStatus("Ο γύρος του πλησιέστερου γείτονα υπολογίστηκε.");
+      }
+      renderTourResults();
+    }
+
+    coffeeStartSelect.addEventListener("change", updateCoffeeSelection);
+    document.getElementById("all-orders").addEventListener("click", runAllOrders);
+    document.getElementById("nearest-neighbor").addEventListener("click", runNearestNeighbor);
+    updateCoffeeSelection();
   </script>
 </body>
 </html>
